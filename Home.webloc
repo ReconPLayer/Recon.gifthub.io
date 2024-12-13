@@ -1,8 +1,164 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>URL</key>
-	<string>https://sites.google.com/view/score-cars/home</string>
-</dict>
-</plist>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Racing Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Roboto', Arial, sans-serif;
+            background: linear-gradient(180deg, #87CEEB, #ffffff);
+        }
+        canvas {
+            display: block;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: #ffffff;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+<div id="score">Score: 0</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    // Scene, camera, and renderer setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x87CEEB);
+    document.body.appendChild(renderer.domElement);
+
+    // Track
+    const track = new THREE.PlaneGeometry(20, 100);
+    const trackMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+    const trackMesh = new THREE.Mesh(track, trackMaterial);
+    trackMesh.rotation.x = -Math.PI / 2;
+    scene.add(trackMesh);
+
+    // Car
+    const carGroup = new THREE.Group();
+
+    // Car body
+    const bodyGeometry = new THREE.BoxGeometry(1.2, 0.6, 2);
+    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xff6347 });
+    const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    carBody.position.y = 0.6;
+    carGroup.add(carBody);
+
+    // Car wheels
+    const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16);
+    const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    const createWheel = (x, z) => {
+        const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(x, 0.3, z);
+        return wheel;
+    };
+    carGroup.add(createWheel(0.6, 0.9));
+    carGroup.add(createWheel(-0.6, 0.9));
+    carGroup.add(createWheel(0.6, -0.9));
+    carGroup.add(createWheel(-0.6, -0.9));
+
+    // Car roof
+    const roofGeometry = new THREE.BoxGeometry(0.8, 0.4, 1);
+    const roofMaterial = new THREE.MeshStandardMaterial({ color: 0xffa07a });
+    const carRoof = new THREE.Mesh(roofGeometry, roofMaterial);
+    carRoof.position.set(0, 1, -0.3);
+    carGroup.add(carRoof);
+
+    carGroup.position.y = 0.3;
+    scene.add(carGroup);
+
+    // Obstacles
+    const obstacles = [];
+    for (let i = 0; i < 5; i++) {
+        const obstacleGroup = new THREE.Group();
+
+        // Obstacle body
+        const obstacleBodyGeometry = new THREE.BoxGeometry(1.2, 0.6, 2);
+        const obstacleBodyMaterial = new THREE.MeshStandardMaterial({ color: 0x4682B4 });
+        const obstacleBody = new THREE.Mesh(obstacleBodyGeometry, obstacleBodyMaterial);
+        obstacleBody.position.y = 0.6;
+        obstacleGroup.add(obstacleBody);
+
+        // Obstacle wheels
+        const createObstacleWheel = (x, z) => {
+            const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(x, 0.3, z);
+            return wheel;
+        };
+        obstacleGroup.add(createObstacleWheel(0.6, 0.9));
+        obstacleGroup.add(createObstacleWheel(-0.6, 0.9));
+        obstacleGroup.add(createObstacleWheel(0.6, -0.9));
+        obstacleGroup.add(createObstacleWheel(-0.6, -0.9));
+
+        obstacleGroup.position.set((Math.random() - 0.5) * 15, 0.3, -Math.random() * 50);
+        obstacles.push(obstacleGroup);
+        scene.add(obstacleGroup);
+    }
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(0, 20, 10);
+    scene.add(directionalLight);
+
+    camera.position.set(0, 5, 10);
+    camera.lookAt(0, 0, -10);
+
+    let speed = 0.1;
+    let score = 0;
+    const scoreElement = document.getElementById('score');
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') carGroup.position.z -= speed;
+        if (e.key === 'ArrowDown') carGroup.position.z += speed;
+        if (e.key === 'ArrowLeft') carGroup.position.x -= speed;
+        if (e.key === 'ArrowRight') carGroup.position.x += speed;
+    });
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Move obstacles
+        obstacles.forEach(obstacle => {
+            obstacle.position.z += speed;
+            if (obstacle.position.z > 10) {
+                obstacle.position.z = -50;
+                obstacle.position.x = (Math.random() - 0.5) * 15;
+                score++;
+                scoreElement.textContent = `Score: ${score}`;
+            }
+
+            // Check collision
+            const dist = carGroup.position.distanceTo(obstacle.position);
+            if (dist < 1.5) {
+                alert(`Game Over! Final Score: ${score}`);
+                score = 0;
+                scoreElement.textContent = `Score: ${score}`;
+                carGroup.position.set(0, 0.3, 0);
+                obstacles.forEach(obs => obs.position.z = -Math.random() * 50);
+            }
+        });
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
+</script>
+</body>
+</html>
